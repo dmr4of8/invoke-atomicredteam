@@ -1,9 +1,5 @@
-Function Map-Objects($Dir, $ObjectType){
+Function Convert-CTIObjects($Dir, $ObjectType){
     return Get-ChildItem -Recurse -LiteralPath $Dir | % { New-Object -TypeName $ObjectType -ArgumentList $(Get-Content -Raw -Path $_.FullName |  ConvertFrom-Json).objects[0] }
-}
-
-Function Map-Objects-From-Files($Dir, $ObjectType){
-    return Get-ChildItem -LiteralPath $Dir | % { New-Object -TypeName $ObjectType -ArgumentList $(Get-Content -Raw -Path $(Join-Path $Dir $_) |  ConvertFrom-Json).objects[0] }
 }
 
 Function Filter-Files($Dir, $Pattern){

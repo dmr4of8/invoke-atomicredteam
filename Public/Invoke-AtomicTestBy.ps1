@@ -1,22 +1,22 @@
 <#
 .SYNOPSIS
-    Get Atomic Tests based on Groups, Softwares, Platforms and/or Tactics.
+    Invoke Atomic Tests based on Groups, Softwares, Platforms and/or Tactics.
 .DESCRIPTION
-    Get Atomic Tests based on Groups, Softwares, Platforms and/or Tactics.  Optionally, you can specify if you want to list the details of the Atomic test(s) only.
-.EXAMPLE Get Atomic Test for Credential Access tactics used by group admin@338.
-    PS/> Get-AtomicTest -Group "admin@338" -Tactic "Credential Access"
-.EXAMPLE List all tests based on conditions.
-    PS/> Get-AtomicTest -Tactic "Discovery" -ShowDetailsBrief
+    Invoke/List Atomic Tests based on Groups, Softwares, Platforms and/or Tactics.  Optionally, you can specify if you want to list the details of the Atomic test(s) only.
+.EXAMPLE Invoke Atomic Test for Credential Access tactics used by group admin@338.
+    PS/> Invoke-AtomicTestBy -Group "admin@338" -Tactic "Credential Access"
+.EXAMPLE Get list of Atomic Tests for Credential Access tactics used by group admin@338.
+    PS/> Invoke-AtomicTestBy -Group "admin@338" -Tactic "Credential Access" -ShowTechniques
 .EXAMPLE List all tactics, groups, etc.
-    PS/> Get-AtomicTest -List "Tactic"
+    PS/> Invoke-AtomicTestBy -List "Tactic"
 .NOTES
     Instead of specifying the Group name, Group Aliases names can also be used to get atomic tests.
     If platform parameters are not passed, the tests would run for the current system's operating system.
     You will get a list of tests that are not run if the atomics are unavailable.
 #>
 
-function Get-AtomicTest {
-    [OutputType([PSCustomObject])]
+function Invoke-AtomicTestBy {
+    [OutputType([PSCustomObject[]])]
     [CmdletBinding()]
     param
     (
@@ -38,8 +38,8 @@ function Get-AtomicTest {
         [Parameter(Mandatory = $false, Position =6)]
         [String]$Software = $null,
 
-        [Parameter(Mandatory = $false, Position =5)]
-        [Switch]$ShowDetailsBrief = $null
+        [Parameter(Mandatory = $false, Position =7)]
+        [Switch]$ShowTechniques = $null
     )
 
     end {
@@ -57,15 +57,15 @@ function Get-AtomicTest {
 
         if($List){
             if($List -eq "Group"){
-                Map-Objects $GroupDir "ThreatGroup" | Format-Table
+                Convert-CTIObjects $GroupDir "ThreatGroup" | Format-Table
             }
 
             if($List -eq "Tactic"){
-                Map-Objects $TacticsDir "Tactic" | Format-Table
+                Convert-CTIObjects $TacticsDir "Tactic" | Format-Table
             }
 
             if($List -eq "Software"){
-                Map-Objects $SoftwareDir "Software" | Format-Table
+                Convert-CTIObjects $SoftwareDir "Software" | Format-Table
             }
 
         }
@@ -73,25 +73,25 @@ function Get-AtomicTest {
             $TechnqiuesFiles = Get-ChildItem -Path $TechniquesDir -Recurse | % {Join-Path $TechniquesDir $_.Name}
 
             if($Group){
-                $GroupList = Map-Objects $GroupDir "ThreatGroup" | Where-Object { $_.Contains($Group) }
+                $GroupList = Convert-CTIObjects $GroupDir "ThreatGroup" | Where-Object { $_.Contains($Group) }
 
                 foreach ($item in $GroupList){
-                    $TechnqiuesFiles = Map-Objects $RelationshipDir "Relationship" | Where-Object {$_.IsTargetRefAttackPattern($item.Guid)} | % { Join-Path $TechniquesDir ($_.TargetRef+".json") }
+                    $TechnqiuesFiles = Convert-CTIObjects $RelationshipDir "Relationship" | Where-Object {$_.IsTargetRefAttackPattern($item.Guid)} | % { Join-Path $TechniquesDir ($_.TargetRef+".json") }
                 }
             }
 
             if($Software){
-                $GroupList = Map-Objects $SoftwareDir "Software" | Where-Object { $_.Contains($Software) }
+                $GroupList = Convert-CTIObjects $SoftwareDir "Software" | Where-Object { $_.Contains($Software) }
 
                 foreach ($item in $GroupList){
-                    $TechnqiuesFiles = Map-Objects $RelationshipDir "Relationship" | Where-Object {$_.IsTargetRefAttackPattern($item.Guid)} | % { Join-Path $TechniquesDir ($_.TargetRef+".json") }
+                    $TechnqiuesFiles = Convert-CTIObjects $RelationshipDir "Relationship" | Where-Object {$_.IsTargetRefAttackPattern($item.Guid)} | % { Join-Path $TechniquesDir ($_.TargetRef+".json") }
                 }
             }
 
-            $AttackObjects = Map-Objects $TechnqiuesFiles "AttackTechnique"
+            $AttackObjects = Convert-CTIObjects $TechnqiuesFiles "AttackTechnique"
 
             if($Tactic){
-                $Tactic = Map-Objects $TacticsDir "Tactic" | Where-Object {$_.Contains($Tactic)} | % {$_.ShortName}
+                $Tactic = Convert-CTIObjects $TacticsDir "Tactic" | Where-Object {$_.Contains($Tactic)} | % {$_.ShortName}
                 $AttackObjects = $AttackObjects | Where-Object {$_.Phases -like $(Get-Query-Term $Tactic)}
             }
 
@@ -115,17 +115,22 @@ function Get-AtomicTest {
             foreach ($Attck in $AttackObjects){
                 $File = "$PathToArt/atomics/{0}/{0}.yaml" -f $Attck.Id
                 if(Test-Path $File){
-                    $AtomicTests += $Attck
+                    $AtomicTests += (Get-AtomicTechnique -Path $File)
                 }else{
                     $TestsNotFound += $Attck
                 }
             }
-            return $AtomicTests
-            # if($TestsNotFound){
-            #     #TODO: Find a way to filter out the techniques whose subtechniques have run.
-            #     Write-Host "The following tests are not executed because there are no atomics for those tests or the technique's subtechniques have run."
-            #     $TestsNotFound | Format-Table
-            # }
+            
+            if($ShowTechniques){
+                $AtomicTests
+            }else{
+                Invoke-AtomicTechniqueSequence $AtomicTests
+                if($TestsNotFound){
+                    #TODO: Find a way to filter out the techniques whose subtechniques have run.
+                    Write-Host "The following tests are not executed because there are no atomics for those tests or the technique's subtechniques have run."
+                    $TestsNotFound | Format-Table
+                }
+            }
         }
     }
 }
