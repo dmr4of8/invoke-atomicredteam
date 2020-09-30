@@ -3,12 +3,13 @@ function Start-AtomicGUI {
         [Int] $port = 8487
     )
     # Install-Module UniversalDashboard if not already installed
-    $UDcommunityInstalled = Get-InstalledModule -Name "UniversalDashboard.Community" -ErrorAction:SilentlyContinue
-    $UDinstalled = Get-InstalledModule -Name "UniversalDashboard" -ErrorAction:SilentlyContinue
-    if (-not $UDcommunityInstalled -and -not $UDinstalled) { 
-        Write-Host "Installing UniversalDashboard.Community"
-        Install-Module -Name UniversalDashboard.Community -Scope CurrentUser -Force
-    }
+    # TODO: Uncomment this later
+    # $UDcommunityInstalled = Get-InstalledModule -Name "UniversalDashboard.Community" -ErrorAction:SilentlyContinue
+    # $UDinstalled = Get-InstalledModule -Name "UniversalDashboard" -ErrorAction:SilentlyContinue
+    # if (-not $UDcommunityInstalled -and -not $UDinstalled) { 
+    #     Write-Host "Installing UniversalDashboard.Community"
+    #     Install-Module -Name UniversalDashboard.Community -Scope CurrentUser -Force
+    # }
 
     ############## Function Definitions Made Available to EndPoints
     function New-UDTextAreaX ($ID, $PlaceHolder) {
@@ -219,11 +220,25 @@ function Start-AtomicGUI {
         }
     }
 
-    ############## End Static Definitions
+    $techniqueId = "T1546.004"
+    $testNum = "1"
 
-    ############## The Dashboard
-    $idleTimeOut = New-TimeSpan -Minutes 10080
-    $db = New-UDDashboard -Title "Atomic Test Creation" -IdleTimeout $idleTimeOut -EndpointInitialization $ei -Content {
+    $testOutput = "This will show the output of the test after it runs"
+
+
+    $inputArgumentInput = New-UDRow -Columns {
+        New-UDColumn -Size 5 {
+            New-UDTextBox -Id "atomicTechniqueId" -Placeholder "Technique ID" -Value $techniqueId
+        }
+        New-UDColumn -Size 1 { 
+            New-UDTextBox -Id "atomicTestNumber" -Placeholder "Test Number" -Value $testNum 
+        }
+        New-UDCOlumn -Size 6 { 
+            New-UDTextBox -Id "argument" -Placeholder "Input Argument" 
+        }
+    }
+
+    $page1 = New-UDPage -Name "createAtomic" -Content {
         New-UDCard -Id "mainCard" -Content {
             New-UDCard -Content {
                 New-UDTextBoxX 'atomicName' "Atomic Test Name"
@@ -250,12 +265,162 @@ function Start-AtomicGUI {
                     )
                     New-UDSelectX 'preReqEx' "Executor for Prereq Commands" 
                 }
-            }   
+            }  
+    
+            # button to fill form with test data for development purposes
+            if ($false) { New-UDButton -Text "Fill Test Data" -OnClick ( $epFillTestData ) }
         }
-
-        # button to fill form with test data for development purposes
-        if ($false) { New-UDButton -Text "Fill Test Data" -OnClick ( $epFillTestData ) }
     }
+    $page2 = New-UDPage -Name "runAtomic" -DefaultHomePage -Content {
+        New-UDCard -Id "attackSelection" -Content {
+            New-UDRow -Columns {
+                # empty column to center select dropdowns
+                New-UDColumn -Size 4 {}
+                New-UDColumn -Size 2 {
+                    New-UDElement -Id "tacticSelect" -Tag "div" -Content {
+                        New-UDElement -Tag "span" -Attributes @{ style = @{fontWeight = "bold"; width = "200px" } } -Content {
+                            "Select MITRE ATT&CK Tactic"
+                        }
+                        New-UDSelect -Option {
+                            New-UDSelectOption -Name 'One' -Value 1
+                            New-UDSelectOption -Name 'Two' -Value 2
+                            New-UDSelectOption -Name 'Three' -Value 3
+                        }
+                    }
+                }
+                New-UDColumn -Size 2 {
+                    New-UDElement -Id "techniqueSelect" -Tag "div" -Content {
+                        New-UDElement -Tag "span" -Attributes @{ style = @{fontWeight = "bold"; width = "300px" } } -Content {
+                            "Select MITRE ATT&CK Technique ID"
+                        }
+                        New-UDSelect -Option {
+                            New-UDSelectOption -Name 'One' -Value 1
+                            New-UDSelectOption -Name 'Two' -Value 2
+                            New-UDSelectOption -Name 'Three' -Value 3
+                        }
+                    }
+                }
+                #empty column to center select dropdowns
+                New-UDColumn -Size 4 {}
+            }
+        }
+        New-UDCard -Id "addTest" -Content {
+            New-UDRow -Columns {
+                New-UDColumn -Size 6 {
+                    New-UDElement -Tag "div" -Attributes @{ style = @{border = "2px solid black"; padding = "5px 20px"; minHeight = "300px" } } -Content {
+                        New-UDCollapsible -Items {
+                            New-UDCollapsibleItem -Title "Item 1" -Icon arrow_circle_right -Content {
+                                "Some content"
+                            }
+                        }
+                    }
+                }
+                New-UDColumn -Size 1 {
+                    New-UDLayout -Columns 2 -Content {
+                        New-UDRow -Columns {
+                            New-UDColumn -SmallOffset 6 -Content {
+                                New-UDButton -Icon plus -style @{"margin" = "100px 0px 10px 0px" }
+                            }
+                            New-UDColumn -SmallOffset 6 -Content {
+                                New-UDButton -Icon minus
+                            }
+                        }
+                    }
+                }
+                New-UDColumn -Size 5 {
+                    New-UDElement -Tag "div" -Attributes @{ style = @{border = "2px solid black"; padding = "5px 20px"; minHeight = "300px" } } -Content {
+                        New-UDCollapsible -Items {
+                            New-UDCollapsibleItem -Title "Item 1" -Icon arrow_circle_right -Content {
+                                "Some content"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        New-UDCard -Id "inputArgs" -TextAlignment "right" -Content {
+            New-UDRow -Columns {
+                New-UDColumn -Size 8 {
+                    New-UDElement -Tag 'h3' -Attributes @{ style = @{fontWeight = "bold"; fontSize = "17px"}} -Content {
+                        "Input Argument 1"
+                    }
+                }
+                New-UDColumn -Size 4 {
+                    $inputArgumentInput
+                }    
+            }
+            New-UDRow -Columns {
+                New-UDColumn -Size 8 {
+                    New-UDElement -Tag 'h3' -Attributes @{ style = @{fontWeight = "bold"; fontSize = "17px"}} -Content {
+                        "Input Argument 2"
+                    }
+                }
+                New-UDColumn -Size 4 {
+                    $inputArgumentInput
+            
+                }
+            }
+        }
+        New-UDCard -Id "executeButtons" -TextAlignment "right" -Content {
+            New-UDRow -Columns {
+                New-UDColumn -Size 10 {
+                    New-UDButton -Text "Reset Dashboard"
+                }
+                New-UDColumn -Size 1 {
+                    New-UDButton -Text "Execute"
+                }
+                New-UDColumn -Size 1 {
+                    New-UDButton -Text "Cleanup"
+                }
+            }
+        }
+        New-UDCard -Id "output" -Content {
+            $testOutput
+        }
+    }
+    $sidenav = New-UDSideNav -Content {
+        New-UDSideNavItem -Text "Create Atomic Test" -PageName "createAtomic" -Icon palette
+        New-UDSideNavItem -Text "Run Atomic Test" -PageName "runAtomic" -icon running
+    }
+
+    ############## End Static Definitions
+
+    ############## The Dashboard
+    $idleTimeOut = New-TimeSpan -Minutes 10080
+    $db = New-UDDashboard -Title "Atomic Red Team GUI" -IdleTimeout $idleTimeOut -EndpointInitialization $ei -Pages @($page1, $page2) -Navigation $sidenav
+    # -Content {
+    #     New-UDCard -Id "mainCard" -Content {
+    #         New-UDCard -Content {
+    #             New-UDTextBoxX 'atomicName' "Atomic Test Name"
+    #             New-UDTextAreaX "atomicDescription" "Atomic Test Description"
+    #             $supportedPlatforms
+    #             New-UDTextAreaX "attackCommands" "Attack Commands"
+    #             $executorRow
+    #             New-UDTextAreaX "cleanupCommands" "Cleanup Commands (Optional)"
+    #             $genarateYamlButton  
+    #         }
+
+    #         # input args
+    #         New-UDCard -Id "inputCard" -Endpoint {
+    #             New-UDButton -Text "Add Input Argument (Optional)" -OnClick (
+    #                 New-UDEndpoint -Endpoint { Add-UDElement -ParentId "inputCard" -Content { New-InputArgCard } }
+    #             )
+    #         }
+
+    #         # prereqs
+    #         New-UDCard -Id "depCard" -Endpoint {
+    #             New-UDLayout -columns 4 {
+    #                 New-UDButton -Text "Add Prerequisite (Optional)" -OnClick (
+    #                     New-UDEndpoint -Endpoint { Add-UDElement -ParentId "depCard" -Content { New-depCard } }
+    #                 )
+    #                 New-UDSelectX 'preReqEx' "Executor for Prereq Commands" 
+    #             }
+    #         }   
+    #     }
+
+    #     # button to fill form with test data for development purposes
+    #     if ($false) { New-UDButton -Text "Fill Test Data" -OnClick ( $epFillTestData ) }
+    # }
     ############## End of the Dashboard
 
     Stop-AtomicGUI
