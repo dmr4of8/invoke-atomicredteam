@@ -15,7 +15,9 @@
     You will get a list of tests that are not run if the atomics are unavailable.
 #>
 
-function Invoke-AtomicTestBy {
+function Invoke-AtomicTestBy {    
+    [OutputType([PSCustomObject[]])]
+    [CmdletBinding()]
     param
     (
         [Parameter(Mandatory = $false, Position = 1)]
@@ -40,7 +42,7 @@ function Invoke-AtomicTestBy {
         [Switch]$ShowTechniques = $null
     )
 
-    process {
+    end {
         $PathToAttackMatrix = Join-Path $PathToArt "cti/enterprise-attack"
         $PathToInvokeAtomic = Join-Path $PathToArt "invoke-atomicredteam"
         $GroupDir = Join-Path $PathToAttackMatrix "intrusion-set"
