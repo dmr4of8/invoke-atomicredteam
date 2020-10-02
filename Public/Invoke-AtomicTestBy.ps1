@@ -16,8 +16,6 @@
 #>
 
 function Invoke-AtomicTestBy {
-    [OutputType([PSCustomObject[]])]
-    [CmdletBinding()]
     param
     (
         [Parameter(Mandatory = $false, Position = 1)]
@@ -42,7 +40,7 @@ function Invoke-AtomicTestBy {
         [Switch]$ShowTechniques = $null
     )
 
-    end {
+    process {
         $PathToAttackMatrix = Join-Path $PathToArt "cti/enterprise-attack"
         $PathToInvokeAtomic = Join-Path $PathToArt "invoke-atomicredteam"
         $GroupDir = Join-Path $PathToAttackMatrix "intrusion-set"
@@ -57,15 +55,15 @@ function Invoke-AtomicTestBy {
 
         if($List){
             if($List -eq "Group"){
-                Convert-CTIObjects $GroupDir "ThreatGroup" | Format-Table
+                return Convert-CTIObjects $GroupDir "ThreatGroup"
             }
 
             if($List -eq "Tactic"){
-                Convert-CTIObjects $TacticsDir "Tactic" | Format-Table
+                return Convert-CTIObjects $TacticsDir "Tactic" 
             }
 
             if($List -eq "Software"){
-                Convert-CTIObjects $SoftwareDir "Software" | Format-Table
+                return Convert-CTIObjects $SoftwareDir "Software"
             }
 
         }
