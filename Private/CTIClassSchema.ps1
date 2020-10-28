@@ -37,7 +37,7 @@ class Software : CTIBase{
     }
 
     [Bool] Contains($QueryTerm){
-        $QueryTerm = Get-Query-Term $QueryTerm
+        $QueryTerm = Get-QueryTerm $QueryTerm
         return (($this.Id -like $QueryTerm) -or ($this.Name -like $QueryTerm) -or ($this.Aliases -like $QueryTerm))
     }
 }
@@ -54,7 +54,7 @@ class Tactic : CTIBase {
     }
 
     [Bool] Contains($QueryTerm){
-        $QueryTerm = Get-Query-Term $QueryTerm
+        $QueryTerm = Get-QueryTerm $QueryTerm
         return (($this.Id -like $QueryTerm) -or ($this.Name -like $QueryTerm) -or ($this.ShortName -like $QueryTerm))
     }
 }
@@ -72,7 +72,7 @@ class ThreatGroup : CTIBase {
     }
 
     [Bool] Contains($QueryTerm){
-        $QueryTerm = Get-Query-Term $QueryTerm
+        $QueryTerm = Get-QueryTerm $QueryTerm
         return (($this.Id -like $QueryTerm) -or ($this.Name -like $QueryTerm) -or ($this.Aliases -like $QueryTerm))
     }
 }
@@ -94,7 +94,7 @@ class AttackTechnique : CTIBase {
     }
 
     [Bool] Contains($QueryTerm){
-        $QueryTerm = Get-Query-Term $QueryTerm
+        $QueryTerm = Get-QueryTerm $QueryTerm
         return (($this.Id -like $QueryTerm) -or ($this.Name -like $QueryTerm) -or ($this.Platforms -like $QueryTerm))
     }
 }

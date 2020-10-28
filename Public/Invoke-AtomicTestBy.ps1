@@ -92,7 +92,7 @@ function Invoke-AtomicTestBy {
 
             if($Tactic){
                 $Tactic = Convert-CTIObjects $TacticsDir "Tactic" | Where-Object {$_.Contains($Tactic)} | % {$_.ShortName}
-                $AttackObjects = $AttackObjects | Where-Object {$_.Phases -like $(Get-Query-Term $Tactic)}
+                $AttackObjects = $AttackObjects | Where-Object {$_.Phases -like $(Get-QueryTerm $Tactic)}
             }
 
             #If no platforms are provided, the tests would run for current system platform.
@@ -106,7 +106,7 @@ function Invoke-AtomicTestBy {
                 }
             }
 
-            $AttackObjects = $AttackObjects | Where-Object {($_.Platforms -like $(Get-Query-Term $Platform)) -and (-not $_.Revoked)}
+            $AttackObjects = $AttackObjects | Where-Object {($_.Platforms -like $(Get-QueryTerm $Platform)) -and (-not $_.Revoked)}
 
             $AtomicTests = @()
 

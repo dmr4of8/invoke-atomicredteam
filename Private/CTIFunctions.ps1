@@ -10,6 +10,6 @@ Function Get-Absolute-Dir($ParentDir, $FileName){
     return Join-Path $ParentDir ("{0}.json" -f $FileName)
 }
 
-Function Get-Query-Term($Term){
+Function Get-QueryTerm($Term){
     return "*{0}*" -f $Term
 }
