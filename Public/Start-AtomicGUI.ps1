@@ -79,11 +79,54 @@ function Start-AtomicGUI {
         }
     }
 
+
+    function New-TechniqueSelected {
+        param (
+            $selectedTechnique,
+            $techniques
+        )
+        if ($selectedTechnique -eq "Select") {
+            Show-UDToast -Message "You must select a technique"
+            Clear-UDElement -Id "testColumn"
+            return;
+        }
+        
+        Clear-UDElement -Id "testColumn"
+        $techniques | ForEach-Object { if ($_.display_name -eq $selectedTechnique) {
+            $techniqueObject = $_
+            $techniqueName = $techniqueObject.attack_technique
+            $atomicTestOptions = @()
+            $atomicTestOptions += New-UDSelectOption -Name "Select" -Value "Select"
+            $atomicTestOptions += $techniqueObject.atomic_tests | ForEach-Object { New-UDSelectOption -Name $_.name -Value "$($_.name),$($techniqueName)" }
+            Add-UDElement -ParentId "testColumn" -Content {New-UDElement -Id "testSelect" -Tag "div" -Content {
+                New-UDElement -Tag "span" -Attributes @{ style = @{fontWeight = "bold"; width = "300px" } } -Content {
+                    "Select MITRE ATT&CK Test"
+                }
+                New-UDSelect -Id "testSelectOptions" -Option {
+                    $atomicTestOptions
+                } -OnChange { New-TestSelected -selectedTest $EventData }
+            }} 
+        } }
+        
+    }
+
+    function New-TestSelected {
+        param (
+            $selectedTest
+        )
+        $splitArray = $selectedTest.Split(",")
+        Show-UDToast -Message $splitArray[0]
+        Show-UDToast -Message $splitArray[1]
+        $attackNumber = $splitArray[1]
+        $inputArgsTest = Invoke-AtomicTest $attackNumber -TestNames $splitArray[0] -PromptForInputArgs
+        # Show-UDToast -Message $inputArgsTest
+    }
+
     ############## End Function Definitions Made Available to EndPoints
 
     # EndpointInitialization defining which methods, modules, and variables will be available for use within an endpoint
     $ei = New-UDEndpointInitialization `
-        -Function @("New-InputArgCard", "New-depCard", "New-UDTextAreaX", "New-UDTextBoxX", "New-UDSelectX") `
+        -Function @("New-InputArgCard", "New-depCard", "New-UDTextAreaX", "New-UDTextBoxX", "New-UDSelectX", "New-TechniqueSelected", "New-TestSelected") `
         -Variable @("InputArgCards", "depCards", "yaml") `
         -Module @("..\Invoke-AtomicRedTeam.psd1")
 
@@ -198,6 +241,37 @@ function Start-AtomicGUI {
         Set-UDElement -Id "depCard$cardNumber-getPrereqCommand" -Attributes @{value = "iwr" }       
         
     }
+
+    $epNewTacticSelected = New-UDEndpoint -Endpoint {
+        $selectedTactic = (Get-UDElement -Id tacticSelector).Attributes['value']
+        if ($selectedTactic -eq "Select") {
+            Show-UDToast -Message "You must select a tactic"
+            Clear-UDElement -Id "techniqueColumn"
+            Clear-UDElement -Id "testColumn"
+            return;
+        }
+        Clear-UDElement -Id "techniqueColumn"
+        Clear-UDElement -Id "testColumn"
+        $techniques = Invoke-AtomicTestBy -Tactic $selectedTactic -ShowTechniques
+        $techniqueOptions = $techniques | ForEach-Object { New-UDSelectOption -Name $_.display_name -Value $_.display_name }
+        $mitreTechniqueOptions = @()
+        $mitreTechniqueOptions += New-UDSelectOption -Name "Select" -Value "Select"
+        $mitreTechniqueOptions += $techniqueOptions
+        Add-UDElement -ParentId "techniqueColumn" -Content {New-UDElement -Id "techniqueSelect" -Tag "div" -Content {
+            New-UDElement -Tag "span" -Attributes @{ style = @{fontWeight = "bold"; width = "300px" } } -Content {
+                "Select MITRE ATT&CK Technique"
+            }
+            New-UDSelect -Id "techniqueSelectOptions" -Option {
+                $mitreTechniqueOptions
+            } -OnChange { New-TechniqueSelected -selectedTechnique $EventData -techniques $techniques }
+        }} 
+    }
+
+    # $epNewTechniqueSelected = New-UDEndpoint -Endpoint {
+    #     Show-UDToast -Message "New Endpoint"
+    #     $selectedTechnique = (Get-UDElement -Id techniqueSelectOptions).Attributes['value']
+    #     Show-UDToast -Message $selectedTechnique
+    # }
     ############## End EndPoint (ep) Definitions
 
     ############## Static Definitions
@@ -238,6 +312,16 @@ function Start-AtomicGUI {
         }
     }
 
+    $tactics = Invoke-AtomicTestBy -List Tactic
+
+    $defaultSelect = New-UDSelectOption -Name "Select" -Value "Select"
+
+    $tacticSelectOptions = $tactics | ForEach-Object { New-UDSelectOption -Name $_.name -Value $_.name }
+    
+    $mitreTacticOptions = New-Object System.Collections.ArrayList($null)
+    $mitreTacticOptions.Add($defaultSelect)
+    $mitreTacticOptions += $tacticSelectOptions
+
     $page1 = New-UDPage -Name "createAtomic" -Content {
         New-UDCard -Id "mainCard" -Content {
             New-UDCard -Content {
@@ -275,69 +359,61 @@ function Start-AtomicGUI {
         New-UDCard -Id "attackSelection" -Content {
             New-UDRow -Columns {
                 # empty column to center select dropdowns
-                New-UDColumn -Size 4 {}
+                New-UDColumn -Size 3 {}
                 New-UDColumn -Size 2 {
                     New-UDElement -Id "tacticSelect" -Tag "div" -Content {
                         New-UDElement -Tag "span" -Attributes @{ style = @{fontWeight = "bold"; width = "200px" } } -Content {
                             "Select MITRE ATT&CK Tactic"
                         }
-                        New-UDSelect -Option {
-                            New-UDSelectOption -Name 'One' -Value 1
-                            New-UDSelectOption -Name 'Two' -Value 2
-                            New-UDSelectOption -Name 'Three' -Value 3
-                        }
+                        New-UDSelect -Id "tacticSelector" -Option {
+                            $mitreTacticOptions
+                        } -OnChange  $epNewTacticSelected 
                     }
                 }
-                New-UDColumn -Size 2 {
-                    New-UDElement -Id "techniqueSelect" -Tag "div" -Content {
-                        New-UDElement -Tag "span" -Attributes @{ style = @{fontWeight = "bold"; width = "300px" } } -Content {
-                            "Select MITRE ATT&CK Technique ID"
-                        }
-                        New-UDSelect -Option {
-                            New-UDSelectOption -Name 'One' -Value 1
-                            New-UDSelectOption -Name 'Two' -Value 2
-                            New-UDSelectOption -Name 'Three' -Value 3
-                        }
-                    }
+                New-UDColumn -Size 2 -Id "techniqueColumn" {
+                    
+                }
+                New-UDColumn -Size 2 -Id "testColumn" {
+
                 }
                 #empty column to center select dropdowns
-                New-UDColumn -Size 4 {}
+                New-UDColumn -Size 3 {}
             }
         }
-        New-UDCard -Id "addTest" -Content {
-            New-UDRow -Columns {
-                New-UDColumn -Size 6 {
-                    New-UDElement -Tag "div" -Attributes @{ style = @{border = "2px solid black"; padding = "5px 20px"; minHeight = "300px" } } -Content {
-                        New-UDCollapsible -Items {
-                            New-UDCollapsibleItem -Title "Item 1" -Icon arrow_circle_right -Content {
-                                "Some content"
-                            }
-                        }
-                    }
-                }
-                New-UDColumn -Size 1 {
-                    New-UDLayout -Columns 2 -Content {
-                        New-UDRow -Columns {
-                            New-UDColumn -SmallOffset 6 -Content {
-                                New-UDButton -Icon plus -style @{"margin" = "100px 0px 10px 0px" }
-                            }
-                            New-UDColumn -SmallOffset 6 -Content {
-                                New-UDButton -Icon minus
-                            }
-                        }
-                    }
-                }
-                New-UDColumn -Size 5 {
-                    New-UDElement -Tag "div" -Attributes @{ style = @{border = "2px solid black"; padding = "5px 20px"; minHeight = "300px" } } -Content {
-                        New-UDCollapsible -Items {
-                            New-UDCollapsibleItem -Title "Item 1" -Icon arrow_circle_right -Content {
-                                "Some content"
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        # New-UDCard -Id "addTest" -Content {
+        #     New-UDRow -Columns {
+        #         New-UDColumn -Size 6 {
+        #             New-UDElement -Tag "div" -Attributes @{ style = @{border = "2px solid black"; padding = "5px 20px"; minHeight = "300px" } } -Content {
+        #                 New-UDCollapsible -Items {
+        #                     New-UDCollapsibleItem -Title "Item 1" -Icon arrow_circle_right -Content {
+        #                         "Some content"
+        #                     }
+        #                 }
+        #             }
+        #         }
+        #         New-UDColumn -Size 1 {
+        #             New-UDLayout -Columns 2 -Content {
+        #                 New-UDRow -Columns {
+        #                     New-UDColumn -SmallOffset 6 -Content {
+        #                         New-UDButton -Icon plus -style @{"margin" = "100px 0px 10px 0px" }
+        #                     }
+        #                     New-UDColumn -SmallOffset 6 -Content {
+        #                         New-UDButton -Icon minus
+        #                     }
+        #                 }
+        #             }
+        #         }
+        #         New-UDColumn -Size 5 {
+        #             New-UDElement -Tag "div" -Attributes @{ style = @{border = "2px solid black"; padding = "5px 20px"; minHeight = "300px" } } -Content {
+        #                 New-UDCollapsible -Items {
+        #                     New-UDCollapsibleItem -Title "Item 1" -Icon arrow_circle_right -Content {
+        #                         "Some content"
+        #                     }
+        #                 }
+        #             }
+        #         }
+        #     }
+        # }
         New-UDCard -Id "inputArgs" -TextAlignment "right" -Content {
             New-UDRow -Columns {
                 New-UDColumn -Size 8 {
@@ -377,7 +453,7 @@ function Start-AtomicGUI {
         New-UDCard -Id "output" -Content {
             $testOutput
         }
-    }
+    } 
     $sidenav = New-UDSideNav -Content {
         New-UDSideNavItem -Text "Create Atomic Test" -PageName "createAtomic" -Icon palette
         New-UDSideNavItem -Text "Run Atomic Test" -PageName "runAtomic" -icon running
@@ -432,3 +508,5 @@ function Stop-AtomicGUI {
     Get-UDDashboard -Name 'AtomicGUI' | Stop-UDDashboard
     Write-Host "Stopped all AtomicGUI Dashboards"
 }
+
+Start-AtomicGUI
