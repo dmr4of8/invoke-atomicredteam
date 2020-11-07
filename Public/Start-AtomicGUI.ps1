@@ -79,7 +79,6 @@ function Start-AtomicGUI {
         }
     }
 
-
     function New-TechniqueSelected {
         param (
             $selectedTechnique,
@@ -94,17 +93,17 @@ function Start-AtomicGUI {
         Clear-UDElement -Id "testColumn"
         $techniques | ForEach-Object { if ($_.display_name -eq $selectedTechnique) {
             $techniqueObject = $_
-            $techniqueName = $techniqueObject.attack_technique
+            $techniqueName = $techniqueObject.display_name
             $atomicTestOptions = @()
             $atomicTestOptions += New-UDSelectOption -Name "Select" -Value "Select"
-            $atomicTestOptions += $techniqueObject.atomic_tests | ForEach-Object { New-UDSelectOption -Name $_.name -Value "$($_.name),$($techniqueName)" }
+            $atomicTestOptions += $techniqueObject.atomic_tests | ForEach-Object { New-UDSelectOption -Name $_.name -Value "$($_.auto_generated_guid),$($techniqueName)" }
             Add-UDElement -ParentId "testColumn" -Content {New-UDElement -Id "testSelect" -Tag "div" -Content {
                 New-UDElement -Tag "span" -Attributes @{ style = @{fontWeight = "bold"; width = "300px" } } -Content {
                     "Select MITRE ATT&CK Test"
                 }
                 New-UDSelect -Id "testSelectOptions" -Option {
                     $atomicTestOptions
-                } -OnChange { New-TestSelected -selectedTest $EventData }
+                } -OnChange { New-TestSelected -selectedTest $EventData -techniques $techniques }
             }} 
         } }
         
@@ -112,14 +111,39 @@ function Start-AtomicGUI {
 
     function New-TestSelected {
         param (
-            $selectedTest
+            $selectedTest,
+            $techniques
         )
         $splitArray = $selectedTest.Split(",")
-        Show-UDToast -Message $splitArray[0]
-        Show-UDToast -Message $splitArray[1]
-        $attackNumber = $splitArray[1]
-        $inputArgsTest = Invoke-AtomicTest $attackNumber -TestNames $splitArray[0] -PromptForInputArgs
-        # Show-UDToast -Message $inputArgsTest
+        $testGuid = $splitArray[0]
+        $selectedTechnique = $splitArray[1]
+        Show-UDToast -Message $testGuid
+        Show-UDToast -Message $selectedTechnique
+        $techniques | ForEach-Object { if ($_.display_name -eq $selectedTechnique) {
+            $techniqueObject = $_
+            $atomicTestObject = $techniqueObject.atomic_tests | Where-Object { $_.auto_generated_guid -eq $testGuid }
+            $inputArguments = $atomicTestObject.input_arguments
+            foreach ($key in $inputArguments.keys) { 
+                Add-UDElement -ParentId "inputArgs" -Content {
+                    New-UDRow -Columns {
+                        New-UDColumn -Size 6 {}
+                        New-UDColumn -Size 6 {
+                            New-UDColumn -Size 4 {
+                                New-UDElement -Tag 'h3' -Attributes @{ style = @{fontWeight = "bold"; fontSize = "17px"}} -Content {
+                                    $key
+                                }
+                            }
+                            New-UDColumn -Size 4 {
+                                New-UDElement -Tag "h3" -Id "description"   -Attributes @{ style = @{ fontSize = "17px"}} -Content {"$($inputArguments.$key.description)"}
+                            }
+                            New-UDCOlumn -Size 4 { 
+                                New-UDTextBox -Id "defaultValue" -Value $inputArguments.$key.default
+                            }
+                        }    
+                    }
+                }
+            }
+        }}
     }
 
     ############## End Function Definitions Made Available to EndPoints
@@ -266,6 +290,9 @@ function Start-AtomicGUI {
             } -OnChange { New-TechniqueSelected -selectedTechnique $EventData -techniques $techniques }
         }} 
     }
+    $epRunAtomicTest = New-UDEndpoint -Endpoint {
+        Show-UDToast -Message "Execute"
+    }
 
     # $epNewTechniqueSelected = New-UDEndpoint -Endpoint {
     #     Show-UDToast -Message "New Endpoint"
@@ -294,23 +321,20 @@ function Start-AtomicGUI {
         }
     }
 
-    $techniqueId = "T1546.004"
-    $testNum = "1"
-
     $testOutput = "This will show the output of the test after it runs"
 
 
-    $inputArgumentInput = New-UDRow -Columns {
-        New-UDColumn -Size 5 {
-            New-UDTextBox -Id "atomicTechniqueId" -Placeholder "Technique ID" -Value $techniqueId
-        }
-        New-UDColumn -Size 1 { 
-            New-UDTextBox -Id "atomicTestNumber" -Placeholder "Test Number" -Value $testNum 
-        }
-        New-UDCOlumn -Size 6 { 
-            New-UDTextBox -Id "argument" -Placeholder "Input Argument" 
-        }
-    }
+    # $inputArgumentInput = New-UDRow -Columns {
+    #     New-UDColumn -Size 5 {
+    #         New-UDTextBox -Id "atomicTechniqueId" -Placeholder "Technique ID" -Value $techniqueId
+    #     }
+    #     New-UDColumn -Size 1 { 
+    #         New-UDTextBox -Id "atomicTestNumber" -Placeholder "Test Number" -Value $testNum 
+    #     }
+    #     New-UDCOlumn -Size 6 { 
+    #         New-UDTextBox -Id "argument" -Placeholder "Input Argument" 
+    #     }
+    # }
 
     $tactics = Invoke-AtomicTestBy -List Tactic
 
@@ -415,27 +439,6 @@ function Start-AtomicGUI {
         #     }
         # }
         New-UDCard -Id "inputArgs" -TextAlignment "right" -Content {
-            New-UDRow -Columns {
-                New-UDColumn -Size 8 {
-                    New-UDElement -Tag 'h3' -Attributes @{ style = @{fontWeight = "bold"; fontSize = "17px"}} -Content {
-                        "Input Argument 1"
-                    }
-                }
-                New-UDColumn -Size 4 {
-                    $inputArgumentInput
-                }    
-            }
-            New-UDRow -Columns {
-                New-UDColumn -Size 8 {
-                    New-UDElement -Tag 'h3' -Attributes @{ style = @{fontWeight = "bold"; fontSize = "17px"}} -Content {
-                        "Input Argument 2"
-                    }
-                }
-                New-UDColumn -Size 4 {
-                    $inputArgumentInput
-            
-                }
-            }
         }
         New-UDCard -Id "executeButtons" -TextAlignment "right" -Content {
             New-UDRow -Columns {
@@ -443,7 +446,7 @@ function Start-AtomicGUI {
                     New-UDButton -Text "Reset Dashboard"
                 }
                 New-UDColumn -Size 1 {
-                    New-UDButton -Text "Execute"
+                    New-UDButton -Text "Execute" -OnClick $epRunAtomicTest
                 }
                 New-UDColumn -Size 1 {
                     New-UDButton -Text "Cleanup"
