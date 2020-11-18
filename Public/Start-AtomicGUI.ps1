@@ -126,20 +126,21 @@ function Start-AtomicGUI {
             $atomicTestObject = $techniqueObject.atomic_tests | Where-Object { $_.auto_generated_guid -eq $testGuid }
             $inputArguments = $atomicTestObject.input_arguments
             foreach ($key in $inputArguments.keys) { 
+                $numInputArgs++
                 Add-UDElement -ParentId "inputArgs" -Content {
                     New-UDRow -Columns {
                         New-UDColumn -Size 6 {}
                         New-UDColumn -Size 6 {
                             New-UDColumn -Size 4 {
-                                New-UDElement -Tag 'h3' -Id "$($key)" -Attributes @{ style = @{fontWeight = "bold"; fontSize = "17px"}} -Content {
+                                New-UDElement -Tag 'h3' -Id "inputArg $($numInputArgs)" -Attributes @{ className = "$($inputArguments.Length),$key"; style = @{fontWeight = "bold"; fontSize = "17px"}} -Content {
                                     $key
                                 }
                             }
                             New-UDColumn -Size 4 {
-                                New-UDElement -Tag "h3" -Id "$($inputArguments.$key.description)"   -Attributes @{ style = @{ fontSize = "17px"}} -Content {"$($inputArguments.$key.description)"}
+                                New-UDElement -Tag "h3" -Id "description"   -Attributes @{ style = @{ fontSize = "17px"}} -Content {"$($inputArguments.$key.description)"}
                             }
                             New-UDColumn -Size 4 { 
-                                New-UDTextBox -Id "$($inputArguments.$key.default)" -Label "Value" -Value $inputArguments.$key.default
+                                New-UDTextBox -Id "$($numInputArgs) default" -Label "Value" -Value $inputArguments.$key.default
                             }
                         }    
                     }
@@ -294,12 +295,37 @@ function Start-AtomicGUI {
     }
     $epRunAtomicTest = New-UDEndpoint -Endpoint {
         Show-UDToast -Message "Execute"
-        $Value = (Get-UDElement -Id 'defaultValue').Attributes['value']
+        $inputArgs = @{}
+        $numArgs = 0
+        try {
+            $classString = (Get-UDElement -Id 'inputArg 1').Attributes['className']
+            $classSplit = $classString.Split(",")
+            $numArgsString = $classSplit[0]
+            $inputArgName = $classSplit[1]
+            $numArgs = [int]$numArgsString
+        }
+        catch {
+            $numArgs = 0
+        }
+        if ($numArgs -gt 0) {
+            for ($i = 1; $i -le $numArgs; $i++) {
+                $inputArgValue = (Get-UDElement -Id "$i default").Attributes['value']
+                $inputArgs["$inputArgName"] = "$inputArgValue"
+            }
+        }
         $selectedTechnique = (Get-UDElement -Id 'techniqueSelectOptions').Attributes['value']
         $splitArray = $selectedTechnique.Split(",")
         $tNumber = $splitArray[1]
-        Show-UDToast -Message $Value
-        Show-UDToast -Message $tNumber
+        $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
+        $testSplit = $testGuidString.Split(",")
+        $testGuid = $testSplit[0]
+        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid  -InputArgs $inputArgs 6>&1)
+        $output = $rawOutput.messageData.message | Out-String
+        Set-UDElement -Id "output" -Content { 
+            New-UDElement -Tag 'span' -Content {
+                $output
+            }
+        }
     }
 
     # $epNewTechniqueSelected = New-UDEndpoint -Endpoint {
@@ -345,6 +371,8 @@ function Start-AtomicGUI {
     # }
 
     $tactics = Invoke-AtomicTestBy -List Tactic
+    
+        
 
     $defaultSelect = New-UDSelectOption -Name "Select" -Value "Select"
 
@@ -462,20 +490,6 @@ function Start-AtomicGUI {
             }
         }
         New-UDCard -Id "output" -Content {
-            New-UDTextbox -Id 'txtExample' -Label 'Label' -Value 'Wax off'
-            New-UDButton -OnClick {
-                $Value = (Get-UDElement -Id 'txtExample').Attributes['value'] 
-                # $testValue = (Get-UDElement -Id 'tacticSelector').Attributes['value']
-                # Show-UDToast -Message $testValue
-                Show-UDToast -Message $Value
-            } -Text "Get textbox value"
-            New-UDButton -OnClick {
-
-                Set-UDElement -Id 'txtExample' -Content {
-                    "Value 123"
-                }
-            
-            } -Text "set textbox value"
             $testOutput
         }
     } 
