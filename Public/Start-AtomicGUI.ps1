@@ -89,7 +89,8 @@ function Start-AtomicGUI {
             Clear-UDElement -Id "testColumn"
             return;
         }
-        
+        $splitArray = $selectedTechnique.Split(",")
+        $selectedTechnique = $splitArray[0]
         Clear-UDElement -Id "testColumn"
         $techniques | ForEach-Object { if ($_.display_name -eq $selectedTechnique) {
             $techniqueObject = $_
@@ -114,6 +115,7 @@ function Start-AtomicGUI {
             $selectedTest,
             $techniques
         )
+        Clear-UDElement -Id 'inputArgs'
         $splitArray = $selectedTest.Split(",")
         $testGuid = $splitArray[0]
         $selectedTechnique = $splitArray[1]
@@ -129,15 +131,15 @@ function Start-AtomicGUI {
                         New-UDColumn -Size 6 {}
                         New-UDColumn -Size 6 {
                             New-UDColumn -Size 4 {
-                                New-UDElement -Tag 'h3' -Attributes @{ style = @{fontWeight = "bold"; fontSize = "17px"}} -Content {
+                                New-UDElement -Tag 'h3' -Id "$($key)" -Attributes @{ style = @{fontWeight = "bold"; fontSize = "17px"}} -Content {
                                     $key
                                 }
                             }
                             New-UDColumn -Size 4 {
-                                New-UDElement -Tag "h3" -Id "description"   -Attributes @{ style = @{ fontSize = "17px"}} -Content {"$($inputArguments.$key.description)"}
+                                New-UDElement -Tag "h3" -Id "$($inputArguments.$key.description)"   -Attributes @{ style = @{ fontSize = "17px"}} -Content {"$($inputArguments.$key.description)"}
                             }
-                            New-UDCOlumn -Size 4 { 
-                                New-UDTextBox -Id "defaultValue" -Value $inputArguments.$key.default
+                            New-UDColumn -Size 4 { 
+                                New-UDTextBox -Id "$($inputArguments.$key.default)" -Label "Value" -Value $inputArguments.$key.default
                             }
                         }    
                     }
@@ -277,7 +279,7 @@ function Start-AtomicGUI {
         Clear-UDElement -Id "techniqueColumn"
         Clear-UDElement -Id "testColumn"
         $techniques = Invoke-AtomicTestBy -Tactic $selectedTactic -ShowTechniques
-        $techniqueOptions = $techniques | ForEach-Object { New-UDSelectOption -Name $_.display_name -Value $_.display_name }
+        $techniqueOptions = $techniques | ForEach-Object { New-UDSelectOption -Name $_.display_name -Value "$($_.display_name),$($_.attack_technique)" }
         $mitreTechniqueOptions = @()
         $mitreTechniqueOptions += New-UDSelectOption -Name "Select" -Value "Select"
         $mitreTechniqueOptions += $techniqueOptions
@@ -292,6 +294,12 @@ function Start-AtomicGUI {
     }
     $epRunAtomicTest = New-UDEndpoint -Endpoint {
         Show-UDToast -Message "Execute"
+        $Value = (Get-UDElement -Id 'defaultValue').Attributes['value']
+        $selectedTechnique = (Get-UDElement -Id 'techniqueSelectOptions').Attributes['value']
+        $splitArray = $selectedTechnique.Split(",")
+        $tNumber = $splitArray[1]
+        Show-UDToast -Message $Value
+        Show-UDToast -Message $tNumber
     }
 
     # $epNewTechniqueSelected = New-UDEndpoint -Endpoint {
@@ -454,6 +462,20 @@ function Start-AtomicGUI {
             }
         }
         New-UDCard -Id "output" -Content {
+            New-UDTextbox -Id 'txtExample' -Label 'Label' -Value 'Wax off'
+            New-UDButton -OnClick {
+                $Value = (Get-UDElement -Id 'txtExample').Attributes['value'] 
+                # $testValue = (Get-UDElement -Id 'tacticSelector').Attributes['value']
+                # Show-UDToast -Message $testValue
+                Show-UDToast -Message $Value
+            } -Text "Get textbox value"
+            New-UDButton -OnClick {
+
+                Set-UDElement -Id 'txtExample' -Content {
+                    "Value 123"
+                }
+            
+            } -Text "set textbox value"
             $testOutput
         }
     } 
