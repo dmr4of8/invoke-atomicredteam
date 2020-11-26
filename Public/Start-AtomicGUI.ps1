@@ -87,6 +87,7 @@ function Start-AtomicGUI {
         if ($selectedTechnique -eq "Select") {
             Show-UDToast -Message "You must select a technique"
             Clear-UDElement -Id "testColumn"
+            Clear-UDElement -Id "inputArgs"
             return;
         }
         $splitArray = $selectedTechnique.Split(",")
@@ -115,7 +116,15 @@ function Start-AtomicGUI {
             $selectedTest,
             $techniques
         )
-        Clear-UDElement -Id 'inputArgs'
+        if ($selectedTest -eq "Select") {
+            Show-UDToast -Message "You must select a test"
+            Clear-UDElement -Id "inputArgs"
+            Set-UDElement -Id "execute" -Attributes @{disabled = $true}
+            Set-UDElement -Id "cleanup" -Attributes @{disabled = $true}
+            Set-UDElement -Id "checkPrereqs" -Attributes @{disabled = $true}
+            Set-UDElement -Id "getPrereqs" -Attributes @{disabled = $true}
+            return;
+        }
         $splitArray = $selectedTest.Split(",")
         $testGuid = $splitArray[0]
         $selectedTechnique = $splitArray[1]
@@ -128,7 +137,7 @@ function Start-AtomicGUI {
             foreach ($key in $inputArguments.keys) { 
                 $numInputArgs++
                 Add-UDElement -ParentId "inputArgs" -Content {
-                    New-UDRow -Columns {
+                    New-UDRow  -Id "inputArgRows" -Columns {
                         New-UDColumn -Size 6 {}
                         New-UDColumn -Size 6 {
                             New-UDColumn -Size 4 {
@@ -147,6 +156,9 @@ function Start-AtomicGUI {
                 }
             }
         }}
+        Set-UDElement -Id "execute" -Attributes @{disabled = $false}
+        Set-UDElement -Id "cleanup" -Attributes @{disabled = $false}
+        Set-UDElement -Id "checkPrereqs" -Attributes @{disabled = $false}
     }
 
     ############## End Function Definitions Made Available to EndPoints
@@ -275,6 +287,7 @@ function Start-AtomicGUI {
             Show-UDToast -Message "You must select a tactic"
             Clear-UDElement -Id "techniqueColumn"
             Clear-UDElement -Id "testColumn"
+            Clear-UDElement -Id "inputArgs"
             return;
         }
         Clear-UDElement -Id "techniqueColumn"
@@ -314,25 +327,89 @@ function Start-AtomicGUI {
             }
         }
         $selectedTechnique = (Get-UDElement -Id 'techniqueSelectOptions').Attributes['value']
-        $splitArray = $selectedTechnique.Split(",")
-        $tNumber = $splitArray[1]
+        $techniqueSplit = $selectedTechnique.Split(",")
+        $tNumber = $techniqueSplit[1]
         $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
         $testSplit = $testGuidString.Split(",")
         $testGuid = $testSplit[0]
-        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid  -InputArgs $inputArgs 6>&1)
-        $output = $rawOutput.messageData.message | Out-String
+        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid  -InputArgs $inputArgs 2>&1 3>&1 4>&1 5>&1 6>&1 )
+        $output = $rawOutput.messageData
         Set-UDElement -Id "output" -Content { 
-            New-UDElement -Tag 'span' -Content {
-                $output
+            New-UDCard -Id 'outputCard' -Content {
+                New-UDElement -Tag 'span' -Attributes  @{ style = @{whiteSpace = "pre-wrap"} } -Content {
+                    Out-String -InputObject $output -Width 100
+                }
             }
         }
     }
 
-    # $epNewTechniqueSelected = New-UDEndpoint -Endpoint {
-    #     Show-UDToast -Message "New Endpoint"
-    #     $selectedTechnique = (Get-UDElement -Id techniqueSelectOptions).Attributes['value']
-    #     Show-UDToast -Message $selectedTechnique
-    # }
+    $epCleanupAtomicTest = New-UDEndpoint -Endpoint {
+        $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
+        $testSplit = $testGuidString.Split(",")
+        $testGuid = $testSplit[0]
+        $selectedTechnique = (Get-UDElement -Id 'techniqueSelectOptions').Attributes['value']
+        $techniqueSplit = $selectedTechnique.Split(",")
+        $tNumber = $techniqueSplit[1]
+        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -Cleanup 6>&1)
+        $output = $rawOutput.messageData.message
+        Set-UDElement -Id "output" -Content { 
+            New-UDCard -Id 'outputCard' -Content {
+                New-UDElement -Tag 'span' -Attributes  @{ style = @{whiteSpace = "pre-wrap"} } -Content {
+                    Out-String -InputObject $output -Width 100
+                }
+            }
+        }
+    }
+
+    $epResetDashboard = New-UDEndpoint -Endpoint {
+        Set-UDElement -Id "tacticSelector" -Attributes @{name = "Select"}
+        Clear-UDElement -Id "techniqueColumn"
+        Clear-UDElement -Id "testColumn"
+        Clear-UDElement -Id "inputArgs"
+        Clear-UDElement -Id "output"
+        Set-UDElement -Id "execute" -Attributes @{disabled = $true}
+        Set-UDElement -Id "cleanup" -Attributes @{disabled = $true}
+        Set-UDElement -Id "checkPrereqs" -Attributes @{disabled = $true}
+        Set-UDElement -Id "getPrereqs" -Attributes @{disabled = $true}
+    }
+    $epCheckPrereqs = New-UDEndpoint -Endpoint {
+        Show-UDToast -Message "Check prereqs"
+        $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
+        $testSplit = $testGuidString.Split(",")
+        $testGuid = $testSplit[0]
+        $selectedTechnique = (Get-UDElement -Id 'techniqueSelectOptions').Attributes['value']
+        $techniqueSplit = $selectedTechnique.Split(",")
+        $tNumber = $techniqueSplit[1]
+        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -CheckPrereqs 6>&1)
+        $output = $rawOutput.messageData.message
+        Set-UDElement -Id "output" -Content { 
+            New-UDCard -Id 'outputCard' -Content {
+                New-UDElement -Tag 'span' -Attributes  @{ style = @{whiteSpace = "pre-wrap"} } -Content {
+                    Out-String -InputObject $output -Width 100
+                }
+            }
+        }
+        Set-UDElement -Id "getPrereqs" -Attributes @{disabled = $false}
+    }
+    $epGetPrereqs = New-UDEndpoint -Endpoint {
+        Show-UDToast "Get Prereqs"
+        $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
+        $testSplit = $testGuidString.Split(",")
+        $testGuid = $testSplit[0]
+        $selectedTechnique = (Get-UDElement -Id 'techniqueSelectOptions').Attributes['value']
+        $techniqueSplit = $selectedTechnique.Split(",")
+        $tNumber = $techniqueSplit[1]
+        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -GetPrereqs 6>&1)
+        $output = $rawOutput.messageData.message
+        Set-UDElement -Id "output" -Content { 
+            New-UDCard -Id 'outputCard' -Content {
+                New-UDElement -Tag 'span' -Attributes  @{ style = @{whiteSpace = "pre-wrap"} } -Content {
+                    Out-String -InputObject $output -Width 100
+                }
+            }
+        }
+    }
+
     ############## End EndPoint (ep) Definitions
 
     ############## Static Definitions
@@ -355,7 +432,7 @@ function Start-AtomicGUI {
         }
     }
 
-    $testOutput = "This will show the output of the test after it runs"
+    # $testOutput = "This will show the output of the test after it runs"
 
 
     # $inputArgumentInput = New-UDRow -Columns {
@@ -474,23 +551,27 @@ function Start-AtomicGUI {
         #         }
         #     }
         # }
-        New-UDCard -Id "inputArgs" -TextAlignment "right" -Content {
+        New-UDCard -Id "inputArgsCard" -TextAlignment "right" -Content {
+            New-UDElement -Tag 'div' -Id "inputArgs" -Content {}
         }
         New-UDCard -Id "executeButtons" -TextAlignment "right" -Content {
             New-UDRow -Columns {
-                New-UDColumn -Size 10 {
-                    New-UDButton -Text "Reset Dashboard"
+                New-UDColumn -Size 8 {
+                    New-UDButton -Id "checkPrereqs" -Text "Check Prereqs" -Disabled -OnClick $epCheckPrereqs
+                    New-UDButton -Id "getPrereqs" -Text "Get Prereqs" -Style @{"margin-left" = "10px"} -Disabled -OnClick $epGetPrereqs
                 }
                 New-UDColumn -Size 1 {
-                    New-UDButton -Text "Execute" -OnClick $epRunAtomicTest
+                    New-UDButton -Id "execute" -Text "Execute" -Disabled -OnClick $epRunAtomicTest
                 }
                 New-UDColumn -Size 1 {
-                    New-UDButton -Text "Cleanup"
+                    New-UDButton -Id "cleanup" -Text "Cleanup" -Disabled -OnClick $epCleanupAtomicTest
+                }
+                New-UDColumn -Size 2 {
+                    New-UDButton -Text "Reset Dashboard" -OnClick $epResetDashboard
                 }
             }
         }
-        New-UDCard -Id "output" -Content {
-            $testOutput
+        New-UDElement -Tag 'div' -Id "output" -Content {
         }
     } 
     $sidenav = New-UDSideNav -Content {
