@@ -84,15 +84,22 @@ function Start-AtomicGUI {
             $selectedTechnique,
             $techniques
         )
+        # Clear dashboard
+        Clear-UDElement -Id "testColumn"
+        Clear-UDElement -Id "inputArgs"
+        Set-UDElement -Id "execute" -Attributes @{disabled = $true}
+        Set-UDElement -Id "cleanup" -Attributes @{disabled = $true}
+        Set-UDElement -Id "checkPrereqs" -Attributes @{disabled = $true}
+        Set-UDElement -Id "getPrereqs" -Attributes @{disabled = $true}
         if ($selectedTechnique -eq "Select") {
             Show-UDToast -Message "You must select a technique"
-            Clear-UDElement -Id "testColumn"
-            Clear-UDElement -Id "inputArgs"
             return;
         }
+        # Get technique from select value string
         $splitArray = $selectedTechnique.Split(",")
         $selectedTechnique = $splitArray[0]
         Clear-UDElement -Id "testColumn"
+        # Create test dropdown select
         $techniques | ForEach-Object { if ($_.display_name -eq $selectedTechnique) {
             $techniqueObject = $_
             $techniqueName = $techniqueObject.display_name
@@ -116,20 +123,21 @@ function Start-AtomicGUI {
             $selectedTest,
             $techniques
         )
+        # Clear dashboard
+        Clear-UDElement -Id "inputArgs"
+        Set-UDElement -Id "execute" -Attributes @{disabled = $true}
+        Set-UDElement -Id "cleanup" -Attributes @{disabled = $true}
+        Set-UDElement -Id "checkPrereqs" -Attributes @{disabled = $true}
+        Set-UDElement -Id "getPrereqs" -Attributes @{disabled = $true}
         if ($selectedTest -eq "Select") {
             Show-UDToast -Message "You must select a test"
-            Clear-UDElement -Id "inputArgs"
-            Set-UDElement -Id "execute" -Attributes @{disabled = $true}
-            Set-UDElement -Id "cleanup" -Attributes @{disabled = $true}
-            Set-UDElement -Id "checkPrereqs" -Attributes @{disabled = $true}
-            Set-UDElement -Id "getPrereqs" -Attributes @{disabled = $true}
             return;
         }
+        # Get test guid and selected technique from select value string
         $splitArray = $selectedTest.Split(",")
         $testGuid = $splitArray[0]
         $selectedTechnique = $splitArray[1]
-        Show-UDToast -Message $testGuid
-        Show-UDToast -Message $selectedTechnique
+        # Create input argument inputs
         $techniques | ForEach-Object { if ($_.display_name -eq $selectedTechnique) {
             $techniqueObject = $_
             $atomicTestObject = $techniqueObject.atomic_tests | Where-Object { $_.auto_generated_guid -eq $testGuid }
@@ -156,6 +164,7 @@ function Start-AtomicGUI {
                 }
             }
         }}
+        # Enable buttons
         Set-UDElement -Id "execute" -Attributes @{disabled = $false}
         Set-UDElement -Id "cleanup" -Attributes @{disabled = $false}
         Set-UDElement -Id "checkPrereqs" -Attributes @{disabled = $false}
@@ -283,15 +292,19 @@ function Start-AtomicGUI {
 
     $epNewTacticSelected = New-UDEndpoint -Endpoint {
         $selectedTactic = (Get-UDElement -Id tacticSelector).Attributes['value']
-        if ($selectedTactic -eq "Select") {
-            Show-UDToast -Message "You must select a tactic"
-            Clear-UDElement -Id "techniqueColumn"
-            Clear-UDElement -Id "testColumn"
-            Clear-UDElement -Id "inputArgs"
-            return;
-        }
+        # Clear dashboard
+        Clear-UDElement -Id "inputArgs"
+        Set-UDElement -Id "execute" -Attributes @{disabled = $true}
+        Set-UDElement -Id "cleanup" -Attributes @{disabled = $true}
+        Set-UDElement -Id "checkPrereqs" -Attributes @{disabled = $true}
+        Set-UDElement -Id "getPrereqs" -Attributes @{disabled = $true}
         Clear-UDElement -Id "techniqueColumn"
         Clear-UDElement -Id "testColumn"
+        if ($selectedTactic -eq "Select") {
+            Show-UDToast -Message "You must select a tactic"
+            return;
+        }
+        # Create technique select dropdown
         $techniques = Invoke-AtomicTestBy -Tactic $selectedTactic -ShowTechniques
         $techniqueOptions = $techniques | ForEach-Object { New-UDSelectOption -Name $_.display_name -Value "$($_.display_name),$($_.attack_technique)" }
         $mitreTechniqueOptions = @()
@@ -307,10 +320,10 @@ function Start-AtomicGUI {
         }} 
     }
     $epRunAtomicTest = New-UDEndpoint -Endpoint {
-        Show-UDToast -Message "Execute"
         $inputArgs = @{}
         $numArgs = 0
         try {
+            # Calculates the number of input arguments (stored in className of the first input argument)
             $classString = (Get-UDElement -Id 'inputArg 1').Attributes['className']
             $classSplit = $classString.Split(",")
             $numArgsString = $classSplit[0]
@@ -318,22 +331,27 @@ function Start-AtomicGUI {
             $numArgs = [int]$numArgsString
         }
         catch {
+            # If there is no first input argument, sets the number of args to 0
             $numArgs = 0
         }
+        # If there are input arguments, creates a hashmap of the arguments and their values
         if ($numArgs -gt 0) {
             for ($i = 1; $i -le $numArgs; $i++) {
                 $inputArgValue = (Get-UDElement -Id "$i default").Attributes['value']
                 $inputArgs["$inputArgName"] = "$inputArgValue"
             }
         }
+        # Gets the tNumber and testGuid from inputs
         $selectedTechnique = (Get-UDElement -Id 'techniqueSelectOptions').Attributes['value']
         $techniqueSplit = $selectedTechnique.Split(",")
         $tNumber = $techniqueSplit[1]
         $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
         $testSplit = $testGuidString.Split(",")
         $testGuid = $testSplit[0]
-        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid  -InputArgs $inputArgs 2>&1 3>&1 4>&1 5>&1 6>&1 )
-        $output = $rawOutput.messageData
+        # Executes atomic test and outputs result to a new card
+        # Output is currently formatted in UTF-16, needs to be encoded to ascii
+        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid  -InputArgs $inputArgs )
+        $output = $rawOutput
         Set-UDElement -Id "output" -Content { 
             New-UDCard -Id 'outputCard' -Content {
                 New-UDElement -Tag 'span' -Attributes  @{ style = @{whiteSpace = "pre-wrap"} } -Content {
@@ -344,13 +362,15 @@ function Start-AtomicGUI {
     }
 
     $epCleanupAtomicTest = New-UDEndpoint -Endpoint {
+        # Gets the tNumber and testGuid from inputs
         $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
         $testSplit = $testGuidString.Split(",")
         $testGuid = $testSplit[0]
         $selectedTechnique = (Get-UDElement -Id 'techniqueSelectOptions').Attributes['value']
         $techniqueSplit = $selectedTechnique.Split(",")
         $tNumber = $techniqueSplit[1]
-        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -Cleanup 6>&1)
+        # Runs cleanup and outputs result to a new card
+        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -Cleanup *>&1)
         $output = $rawOutput.messageData.message
         Set-UDElement -Id "output" -Content { 
             New-UDCard -Id 'outputCard' -Content {
@@ -362,7 +382,9 @@ function Start-AtomicGUI {
     }
 
     $epResetDashboard = New-UDEndpoint -Endpoint {
+        # This is currently not functioning, it should reset the tactic select to 'Select'
         Set-UDElement -Id "tacticSelector" -Attributes @{name = "Select"}
+        # Clears all data except the first select
         Clear-UDElement -Id "techniqueColumn"
         Clear-UDElement -Id "testColumn"
         Clear-UDElement -Id "inputArgs"
@@ -373,14 +395,15 @@ function Start-AtomicGUI {
         Set-UDElement -Id "getPrereqs" -Attributes @{disabled = $true}
     }
     $epCheckPrereqs = New-UDEndpoint -Endpoint {
-        Show-UDToast -Message "Check prereqs"
+        # Gets the tNumber and testGuid from inputs
         $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
         $testSplit = $testGuidString.Split(",")
         $testGuid = $testSplit[0]
         $selectedTechnique = (Get-UDElement -Id 'techniqueSelectOptions').Attributes['value']
         $techniqueSplit = $selectedTechnique.Split(",")
         $tNumber = $techniqueSplit[1]
-        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -CheckPrereqs 6>&1)
+        # Runs checkPrereqs and outputs result to a new card
+        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -CheckPrereqs *>&1)
         $output = $rawOutput.messageData.message
         Set-UDElement -Id "output" -Content { 
             New-UDCard -Id 'outputCard' -Content {
@@ -389,17 +412,19 @@ function Start-AtomicGUI {
                 }
             }
         }
+        # Enables getPrereqs button
         Set-UDElement -Id "getPrereqs" -Attributes @{disabled = $false}
     }
     $epGetPrereqs = New-UDEndpoint -Endpoint {
-        Show-UDToast "Get Prereqs"
+        # Gets the tNumber and testGuid from inputs
         $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
         $testSplit = $testGuidString.Split(",")
         $testGuid = $testSplit[0]
         $selectedTechnique = (Get-UDElement -Id 'techniqueSelectOptions').Attributes['value']
         $techniqueSplit = $selectedTechnique.Split(",")
         $tNumber = $techniqueSplit[1]
-        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -GetPrereqs 6>&1)
+        # Runs getPrereqs and outputs result to a new card
+        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -GetPrereqs *>&1 )
         $output = $rawOutput.messageData.message
         Set-UDElement -Id "output" -Content { 
             New-UDCard -Id 'outputCard' -Content {
@@ -431,34 +456,17 @@ function Start-AtomicGUI {
             New-UDButton -Text "Generate Test Definition YAML" -OnClick ( $epYamlModal )
         }
     }
-
-    # $testOutput = "This will show the output of the test after it runs"
-
-
-    # $inputArgumentInput = New-UDRow -Columns {
-    #     New-UDColumn -Size 5 {
-    #         New-UDTextBox -Id "atomicTechniqueId" -Placeholder "Technique ID" -Value $techniqueId
-    #     }
-    #     New-UDColumn -Size 1 { 
-    #         New-UDTextBox -Id "atomicTestNumber" -Placeholder "Test Number" -Value $testNum 
-    #     }
-    #     New-UDCOlumn -Size 6 { 
-    #         New-UDTextBox -Id "argument" -Placeholder "Input Argument" 
-    #     }
-    # }
-
+    # Get list of tactics
     $tactics = Invoke-AtomicTestBy -List Tactic
-    
-        
-
+    # Default select to be first option on all selects
     $defaultSelect = New-UDSelectOption -Name "Select" -Value "Select"
-
+    # Format tactics to be options for new select
     $tacticSelectOptions = $tactics | ForEach-Object { New-UDSelectOption -Name $_.name -Value $_.name }
-    
+    # Add defaultSelect and tacticSelectOptions to an array
     $mitreTacticOptions = New-Object System.Collections.ArrayList($null)
     $mitreTacticOptions.Add($defaultSelect)
     $mitreTacticOptions += $tacticSelectOptions
-
+    # Set content of Create Atomic Test page
     $page1 = New-UDPage -Name "createAtomic" -Content {
         New-UDCard -Id "mainCard" -Content {
             New-UDCard -Content {
@@ -492,6 +500,7 @@ function Start-AtomicGUI {
             if ($false) { New-UDButton -Text "Fill Test Data" -OnClick ( $epFillTestData ) }
         }
     }
+    # Set content of Run Atomic Test page
     $page2 = New-UDPage -Name "runAtomic" -DefaultHomePage -Content {
         New-UDCard -Id "attackSelection" -Content {
             New-UDRow -Columns {
@@ -517,6 +526,10 @@ function Start-AtomicGUI {
                 New-UDColumn -Size 3 {}
             }
         }
+        #
+        # The following comment is for adding functionality to select multiple tests
+        #
+
         # New-UDCard -Id "addTest" -Content {
         #     New-UDRow -Columns {
         #         New-UDColumn -Size 6 {
@@ -584,39 +597,6 @@ function Start-AtomicGUI {
     ############## The Dashboard
     $idleTimeOut = New-TimeSpan -Minutes 10080
     $db = New-UDDashboard -Title "Atomic Red Team GUI" -IdleTimeout $idleTimeOut -EndpointInitialization $ei -Pages @($page1, $page2) -Navigation $sidenav
-    # -Content {
-    #     New-UDCard -Id "mainCard" -Content {
-    #         New-UDCard -Content {
-    #             New-UDTextBoxX 'atomicName' "Atomic Test Name"
-    #             New-UDTextAreaX "atomicDescription" "Atomic Test Description"
-    #             $supportedPlatforms
-    #             New-UDTextAreaX "attackCommands" "Attack Commands"
-    #             $executorRow
-    #             New-UDTextAreaX "cleanupCommands" "Cleanup Commands (Optional)"
-    #             $genarateYamlButton  
-    #         }
-
-    #         # input args
-    #         New-UDCard -Id "inputCard" -Endpoint {
-    #             New-UDButton -Text "Add Input Argument (Optional)" -OnClick (
-    #                 New-UDEndpoint -Endpoint { Add-UDElement -ParentId "inputCard" -Content { New-InputArgCard } }
-    #             )
-    #         }
-
-    #         # prereqs
-    #         New-UDCard -Id "depCard" -Endpoint {
-    #             New-UDLayout -columns 4 {
-    #                 New-UDButton -Text "Add Prerequisite (Optional)" -OnClick (
-    #                     New-UDEndpoint -Endpoint { Add-UDElement -ParentId "depCard" -Content { New-depCard } }
-    #                 )
-    #                 New-UDSelectX 'preReqEx' "Executor for Prereq Commands" 
-    #             }
-    #         }   
-    #     }
-
-    #     # button to fill form with test data for development purposes
-    #     if ($false) { New-UDButton -Text "Fill Test Data" -OnClick ( $epFillTestData ) }
-    # }
     ############## End of the Dashboard
 
     Stop-AtomicGUI
