@@ -170,6 +170,7 @@ function Start-AtomicGUI {
         Set-UDElement -Id "execute" -Attributes @{disabled = $false}
         Set-UDElement -Id "cleanup" -Attributes @{disabled = $false}
         Set-UDElement -Id "checkPrereqs" -Attributes @{disabled = $false}
+        Set-UDElement -Id "getPrereqs" -Attributes @{disabled = $false}
     }
 
     ############## End Function Definitions Made Available to EndPoints
@@ -323,6 +324,7 @@ function Start-AtomicGUI {
         }} 
     }
     $epRunAtomicTest = New-UDEndpoint -Endpoint {
+        Clear-UDElement -Id "output"
         $inputArgs = @{}
         $numArgs = 0
         try {
@@ -353,8 +355,7 @@ function Start-AtomicGUI {
         $testGuid = $testSplit[0]
         # Executes atomic test and outputs result to a new card
         # Output is currently formatted in UTF-16, needs to be encoded to ascii
-        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid  -InputArgs $inputArgs )
-        $output = $rawOutput
+        $output = (Invoke-AtomicTest $tNumber -TestGuids $testGuid  -InputArgs $inputArgs *>&1 )
         Set-UDElement -Id "output" -Content { 
             New-UDCard -Id 'outputCard' -Content {
                 New-UDElement -Tag 'span' -Attributes  @{ style = @{whiteSpace = "pre-wrap"} } -Content {
@@ -365,6 +366,7 @@ function Start-AtomicGUI {
     }
 
     $epCleanupAtomicTest = New-UDEndpoint -Endpoint {
+        Clear-UDElement -Id "output"
         # Gets the tNumber and testGuid from inputs
         $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
         $testSplit = $testGuidString.Split(",")
@@ -373,8 +375,7 @@ function Start-AtomicGUI {
         $techniqueSplit = $selectedTechnique.Split(",")
         $tNumber = $techniqueSplit[1]
         # Runs cleanup and outputs result to a new card
-        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -Cleanup *>&1)
-        $output = $rawOutput.messageData.message
+        $output = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -Cleanup *>&1)
         Set-UDElement -Id "output" -Content { 
             New-UDCard -Id 'outputCard' -Content {
                 New-UDElement -Tag 'span' -Attributes  @{ style = @{whiteSpace = "pre-wrap"} } -Content {
@@ -398,6 +399,7 @@ function Start-AtomicGUI {
         Set-UDElement -Id "getPrereqs" -Attributes @{disabled = $true}
     }
     $epCheckPrereqs = New-UDEndpoint -Endpoint {
+        Clear-UDElement -Id "output"
         # Gets the tNumber and testGuid from inputs
         $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
         $testSplit = $testGuidString.Split(",")
@@ -406,8 +408,7 @@ function Start-AtomicGUI {
         $techniqueSplit = $selectedTechnique.Split(",")
         $tNumber = $techniqueSplit[1]
         # Runs checkPrereqs and outputs result to a new card
-        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -CheckPrereqs *>&1)
-        $output = $rawOutput.messageData.message
+        $output = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -CheckPrereqs *>&1)
         Set-UDElement -Id "output" -Content { 
             New-UDCard -Id 'outputCard' -Content {
                 New-UDElement -Tag 'span' -Attributes  @{ style = @{whiteSpace = "pre-wrap"} } -Content {
@@ -415,10 +416,9 @@ function Start-AtomicGUI {
                 }
             }
         }
-        # Enables getPrereqs button
-        Set-UDElement -Id "getPrereqs" -Attributes @{disabled = $false}
     }
     $epGetPrereqs = New-UDEndpoint -Endpoint {
+        Clear-UDElement -Id "output"
         # Gets the tNumber and testGuid from inputs
         $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
         $testSplit = $testGuidString.Split(",")
@@ -427,8 +427,7 @@ function Start-AtomicGUI {
         $techniqueSplit = $selectedTechnique.Split(",")
         $tNumber = $techniqueSplit[1]
         # Runs getPrereqs and outputs result to a new card
-        $rawOutput = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -GetPrereqs *>&1 )
-        $output = $rawOutput.messageData.message
+        $output = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -GetPrereqs *>&1 )
         Set-UDElement -Id "output" -Content { 
             New-UDCard -Id 'outputCard' -Content {
                 New-UDElement -Tag 'span' -Attributes  @{ style = @{whiteSpace = "pre-wrap"} } -Content {
@@ -611,5 +610,3 @@ function Stop-AtomicGUI {
     Get-UDDashboard -Name 'AtomicGUI' | Stop-UDDashboard
     Write-Host "Stopped all AtomicGUI Dashboards"
 }
-
-Start-AtomicGUI
