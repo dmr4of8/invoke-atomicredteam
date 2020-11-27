@@ -87,6 +87,7 @@ function Start-AtomicGUI {
         # Clear dashboard
         Clear-UDElement -Id "testColumn"
         Clear-UDElement -Id "inputArgs"
+        Clear-UDElement -Id "output"
         Set-UDElement -Id "execute" -Attributes @{disabled = $true}
         Set-UDElement -Id "cleanup" -Attributes @{disabled = $true}
         Set-UDElement -Id "checkPrereqs" -Attributes @{disabled = $true}
@@ -125,6 +126,7 @@ function Start-AtomicGUI {
         )
         # Clear dashboard
         Clear-UDElement -Id "inputArgs"
+        Clear-UDElement -Id "output"
         Set-UDElement -Id "execute" -Attributes @{disabled = $true}
         Set-UDElement -Id "cleanup" -Attributes @{disabled = $true}
         Set-UDElement -Id "checkPrereqs" -Attributes @{disabled = $true}
@@ -294,6 +296,7 @@ function Start-AtomicGUI {
         $selectedTactic = (Get-UDElement -Id tacticSelector).Attributes['value']
         # Clear dashboard
         Clear-UDElement -Id "inputArgs"
+        Clear-UDElement -Id "output"
         Set-UDElement -Id "execute" -Attributes @{disabled = $true}
         Set-UDElement -Id "cleanup" -Attributes @{disabled = $true}
         Set-UDElement -Id "checkPrereqs" -Attributes @{disabled = $true}
