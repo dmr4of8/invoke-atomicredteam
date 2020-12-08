@@ -91,7 +91,7 @@ function Start-AtomicGUI {
 
     function Set-EnableButton {
         param (
-            [switch]$disabled
+            $disabled 
         )
         Set-UDElement -Id "execute" -Attributes @{disabled = $disabled }
         Set-UDElement -Id "cleanup" -Attributes @{disabled = $disabled }
@@ -108,7 +108,7 @@ function Start-AtomicGUI {
         Clear-UDElement -Id "testColumn"
         Clear-UDElement -Id "inputArgs"
         Clear-UDElement -Id "output"
-        Set-EnableButton -disabled
+        Set-EnableButton -disabled $true
         if ($selectedTechnique -eq "Select") {
             Show-UDToast -Message "You must select a technique"
             return;
@@ -140,7 +140,7 @@ function Start-AtomicGUI {
         # Clear dashboard
         Clear-UDElement -Id "inputArgs"
         Clear-UDElement -Id "output"
-        Set-EnableButton -disabled
+        Set-EnableButton -disabled $true
         if ($selectedTest -eq "Select") {
             Show-UDToast -Message "You must select a test"
             return;
@@ -180,7 +180,7 @@ function Start-AtomicGUI {
             }
         }
         # Enable buttons
-        Set-EnableButton
+        Set-EnableButton -disable $false
     }
 
     ############## End Function Definitions Made Available to EndPoints
@@ -308,7 +308,7 @@ function Start-AtomicGUI {
         # Clear dashboard
         Clear-UDElement -Id "inputArgs"
         Clear-UDElement -Id "output"
-        Set-EnableButton -disabled
+        Set-EnableButton -disabled $true
         Clear-UDElement -Id "techniqueColumn"
         Clear-UDElement -Id "testColumn"
         if ($selectedTactic -eq "Select") {
@@ -398,7 +398,7 @@ function Start-AtomicGUI {
         Clear-UDElement -Id "testColumn"
         Clear-UDElement -Id "inputArgs"
         Clear-UDElement -Id "output"
-        Set-EnableButton -disabled
+        Set-EnableButton -disabled $true
     }
     $epCheckPrereqs = New-UDEndpoint -Endpoint {
         Clear-UDElement -Id "output"
