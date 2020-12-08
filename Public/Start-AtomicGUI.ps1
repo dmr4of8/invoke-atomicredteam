@@ -5,13 +5,12 @@ function Start-AtomicGUI {
         [String]$PathToAtomicsFolder = $( if ($IsLinux -or $IsMacOS) { $Env:HOME + "/AtomicRedTeam/atomics" } else { $env:HOMEDRIVE + "\AtomicRedTeam\atomics" })
     )
     # Install-Module UniversalDashboard if not already installed
-    # TODO: Uncomment this later
-    # $UDcommunityInstalled = Get-InstalledModule -Name "UniversalDashboard.Community" -ErrorAction:SilentlyContinue
-    # $UDinstalled = Get-InstalledModule -Name "UniversalDashboard" -ErrorAction:SilentlyContinue
-    # if (-not $UDcommunityInstalled -and -not $UDinstalled) { 
-    #     Write-Host "Installing UniversalDashboard.Community"
-    #     Install-Module -Name UniversalDashboard.Community -Scope CurrentUser -Force
-    # }
+    $UDcommunityInstalled = Get-InstalledModule -Name "UniversalDashboard.Community" -ErrorAction:SilentlyContinue
+    $UDinstalled = Get-InstalledModule -Name "UniversalDashboard" -ErrorAction:SilentlyContinue
+    if (-not $UDcommunityInstalled -and -not $UDinstalled) { 
+        Write-Host "Installing UniversalDashboard.Community"
+        Install-Module -Name UniversalDashboard.Community -Scope CurrentUser -Force
+    }
 
     ############## Function Definitions Made Available to EndPoints
     function New-UDTextAreaX ($ID, $PlaceHolder) {
