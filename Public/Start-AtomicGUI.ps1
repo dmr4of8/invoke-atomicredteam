@@ -154,7 +154,7 @@ function Start-AtomicGUI {
         if ( $Cache:inputArguments.Length -gt 0) {
             Add-UDElement -ParentId "inputArgs" -Content {
                 New-UDCard -Id "inputArgsCard" -TextAlignment 'center' -Endpoint {
-                    New-UDElement -Tag "h1" -Attributes @{ style = @{ fontWeight = "300"; fontSize = "24px"; margin = "10px" } } -Content { "Input Arguments $($Cache:inputArguments.Length)" }
+                    New-UDElement -Tag "h1" -Attributes @{ style = @{ fontWeight = "300"; fontSize = "24px"; margin = "10px" } } -Content { "Input Arguments" }
                     foreach ($key in $Cache:inputArguments.keys) {
                         $numInputArgs++
                         Add-UDElement -ParentId "inputArgsCard" -Content {
@@ -314,7 +314,7 @@ function Start-AtomicGUI {
         }
         # Create technique select dropdown
         $techiqueIDs = ($index | where-object { $_.Tactic -eq $selectedTactic }).'Technique #' | Get-Unique
-        $techniques = $AllTechniques | Where-Object { $techiqueIDs -contains $_.attack_technique }
+        F$techniques = $AllTechniques | Where-Object { ($techiqueIDs -contains $_.attack_technique) -and ( $_.atomic_tests.supported_platforms -contains $platform)}
         $techniqueOptions = $techniques | ForEach-Object { New-UDSelectOption -Name $_.display_name -Value "$($_.display_name),$($_.attack_technique)" }
         $mitreTechniqueOptions = @()
         $mitreTechniqueOptions += New-UDSelectOption -Name "Select" -Value "Select"
