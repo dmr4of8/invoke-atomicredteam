@@ -127,7 +127,7 @@ function Start-AtomicGUI {
         }
         Add-UDElement -ParentId "testColumn" -Content {
             New-UDSelect -Label "Select MITRE ATT&CK Test" -Id "testSelectOptions" -Option { $atomicTestOptions
-            } -OnChange { New-TestSelected -selectedTest $EventData -techniques $techniques }
+            } -OnChange (  New-UDEndpoint -Endpoint { New-TestSelected -selectedTest $EventData -technique $ArgumentList } -ArgumentList $techniqueObject )
         } 
         
     }
@@ -135,7 +135,7 @@ function Start-AtomicGUI {
     function New-TestSelected {
         param (
             $selectedTest,
-            $techniques
+            $technique
         )
         # Clear dashboard
         Clear-UDElement -Id "inputArgs"
@@ -149,34 +149,31 @@ function Start-AtomicGUI {
         # Get test guid and selected technique from select value string
         $testGuid = $selectedTest.Split(",")[0]
         # Create input argument inputs
-        $atomicTestObject = $AllTechniques.atomic_tests | where-object { $_.auto_generated_guid -eq $testGuid }
-        $inputArguments = $atomicTestObject.input_arguments
-        if ( $inputArguments.Length -gt 0) {
+        $atomicTestObject = $technique.atomic_tests | where-object { $_.auto_generated_guid -eq $testGuid }
+        $Cache:inputArguments = $atomicTestObject.input_arguments
+        if ( $Cache:inputArguments.Length -gt 0) {
             Add-UDElement -ParentId "inputArgs" -Content {
-                New-UDCard -Id "inputArgsCard" -TextAlignment 'center' -Content {
-                    New-UDElement -Tag "h1" -Attributes @{ style = @{ fontWeight = "300"; fontSize = "24px"; margin = "10px" } } -Content { "Input Arguments" }
-                }
-            }
-            foreach ($key in $inputArguments.keys) {
-                $numInputArgs++
-                Add-UDElement -ParentId "inputArgsCard" -Content {
-                    New-UDRow  -Id "inputArgRows" -Columns {
-                        New-UDColumn -Size 4 {}
-                        New-UDColumn -Size 8 {
-                            New-UDColumn -Size 4 {
-                                New-UDElement -Tag 'h3' -Id "inputArg $($numInputArgs)" -Attributes @{ className = "$($inputArguments.Length),$key"; style = @{fontSize = "16px"; margin = "30px" } } -Content {
-                                    $key
-                                }
+                New-UDCard -Id "inputArgsCard" -TextAlignment 'center' -Endpoint {
+                    New-UDElement -Tag "h1" -Attributes @{ style = @{ fontWeight = "300"; fontSize = "24px"; margin = "10px" } } -Content { "Input Arguments $($Cache:inputArguments.Length)" }
+                    foreach ($key in $Cache:inputArguments.keys) {
+                        $numInputArgs++
+                        Add-UDElement -ParentId "inputArgsCard" -Content {
+                            New-UDRow  -Id "inputArgRows" -Columns {
+                                New-UDColumn -Size 4 {}
+                                New-UDColumn -Size 8 {
+                                    New-UDColumn -Size 4 {
+                                        New-UDElement -Tag 'h3' -Id "inputArg $($numInputArgs)" -Attributes @{ className = "$($Cache:inputArguments.Length),$key"; style = @{fontSize = "16px"; margin = "30px" } } -Content {
+                                            $key
+                                        }
+                                    }
+                                    New-UDColumn -Size 8 { 
+                                        New-UDTextBox -Id "$($numInputArgs) default" -Label $Cache:inputArguments[$key].description -Value $Cache:inputArguments[$key].default
+                                    }    
+                                }    
                             }
-                            # New-UDColumn -Size 6 { 
-                            #     New-UDTextBox -Label $inputArguments[$key].description -Id "$($numInputArgs) default" -Value $inputArguments[$key].default
-                            # }
-                            New-UDColumn -Size 8 { 
-                                New-UDTextBox -Id "$($numInputArgs) default" -Label $inputArguments[$key].description -Value $inputArguments[$key].default
-                            }    
-                        }    
-                    }
-                }
+                        }
+                    } 
+                } 
             }
         }
         # Enable buttons
@@ -188,7 +185,7 @@ function Start-AtomicGUI {
     # EndpointInitialization defining which methods, modules, and variables will be available for use within an endpoint
     $ei = New-UDEndpointInitialization `
         -Function @("New-InputArgCard", "New-depCard", "New-UDTextAreaX", "New-UDTextBoxX", "New-UDSelectX", "New-TechniqueSelected", "New-TestSelected", "Set-EnableButton") `
-        -Variable @("InputArgCards", "depCards", "yaml", "tactics", "AllTechniques", "platform") `
+        -Variable @("InputArgCards", "depCards", "yaml", "tactics", "index", "AllTechniques", "platform") `
         -Module @("..\Invoke-AtomicRedTeam.psd1")
 
     ############## EndPoint (ep) Definitions: Dynamic code called to generate content for an element or perfrom onClick actions
@@ -325,7 +322,7 @@ function Start-AtomicGUI {
         Add-UDElement -ParentId "techniqueColumn" -Content {
             New-UDSelect -Label "Select MITRE ATT&CK Technique" -Id "techniqueSelectOptions" -Option {
                 $mitreTechniqueOptions
-            } -OnChange { New-TechniqueSelected -selectedTechnique $EventData -techniques $techniques }
+            } -OnChange (  New-UDEndpoint -Endpoint { New-TechniqueSelected -selectedTechnique $EventData -techniques $ArgumentList } -ArgumentList $techniques  )
         } 
     }
     $epRunAtomicTest = New-UDEndpoint -Endpoint {
@@ -505,13 +502,13 @@ function Start-AtomicGUI {
     # Set content of Run Atomic Test page
     $page1 = New-UDPage -Name "runAtomic" -DefaultHomePage -Content {
         New-UDCard -Id "attackSelection" -Content {
-                    New-UDElement -Tag "div" -Attributes @{ style = @{ width = "30%"; marginLeft = "3%"; display = "inline-block" } } -Content {
-                        New-UDSelect -Label "Select MITRE ATT&CK Tactic" -Id "tacticSelector" -Option {
-                            $mitreTacticOptions
-                        } -OnChange  $epNewTacticSelected 
-                    }
-                    New-UDElement -Tag "div" -Id "techniqueColumn" -Attributes @{ style = @{ width = "30%"; marginLeft = "3%"; display = "inline-block" } } -Content {}
-                    New-UDElement -Tag "div" -Id "testColumn" -Attributes @{ style = @{ width = "30%"; marginLeft = "3%"; display = "inline-block" } } -Content {}
+            New-UDElement -Tag "div" -Attributes @{ style = @{ width = "30%"; marginLeft = "3%"; display = "inline-block" } } -Content {
+                New-UDSelect -Label "Select MITRE ATT&CK Tactic" -Id "tacticSelector" -Option {
+                    $mitreTacticOptions
+                } -OnChange  $epNewTacticSelected 
+            }
+            New-UDElement -Tag "div" -Id "techniqueColumn" -Attributes @{ style = @{ width = "30%"; marginLeft = "3%"; display = "inline-block" } } -Content {}
+            New-UDElement -Tag "div" -Id "testColumn" -Attributes @{ style = @{ width = "30%"; marginLeft = "3%"; display = "inline-block" } } -Content {}
         }
         #
         # The following comment is for adding functionality to select multiple tests
@@ -575,11 +572,11 @@ function Start-AtomicGUI {
     ############## End of the Dashboard
 
     Stop-AtomicGUI
-    Start-UDDashboard -port $port -Dashboard $db -Name "AtomicGUI" -ListenAddress 127.0.0.1
+    Start-UDDashboard -port $port -Dashboard $db -Name "Atomic Red Team GUI" -ListenAddress 127.0.0.1
     start-process http://localhost:$port
 }
 
 function Stop-AtomicGUI {
-    Get-UDDashboard -Name 'AtomicGUI' | Stop-UDDashboard
-    Write-Host "Stopped all AtomicGUI Dashboards"
+    Get-UDDashboard | Stop-UDDashboard
+    Write-Host "Stopped all Dashboards"
 }
