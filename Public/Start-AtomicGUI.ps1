@@ -369,6 +369,27 @@ function Start-AtomicGUI {
 
     $epCleanupAtomicTest = New-UDEndpoint -Endpoint {
         Clear-UDElement -Id "output"
+        $inputArgs = @{}
+        $numArgs = 0
+        try {
+            # Calculates the number of input arguments (stored in className of the first input argument)
+            $classString = (Get-UDElement -Id 'inputArg 1').Attributes['className']
+            $classSplit = $classString.Split(",")
+            $numArgsString = $classSplit[0]
+            $inputArgName = $classSplit[1]
+            $numArgs = [int]$numArgsString
+        }
+        catch {
+            # If there is no first input argument, sets the number of args to 0
+            $numArgs = 0
+        }
+        # If there are input arguments, creates a hashmap of the arguments and their values
+        if ($numArgs -gt 0) {
+            for ($i = 1; $i -le $numArgs; $i++) {
+                $inputArgValue = (Get-UDElement -Id "$i default").Attributes['value']
+                $inputArgs["$inputArgName"] = "$inputArgValue"
+            }
+        }
         # Gets the tNumber and testGuid from inputs
         $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
         $testSplit = $testGuidString.Split(",")
@@ -377,7 +398,7 @@ function Start-AtomicGUI {
         $techniqueSplit = $selectedTechnique.Split(",")
         $tNumber = $techniqueSplit[1]
         # Runs cleanup and outputs result to a new card
-        $output = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -Cleanup *>&1)
+        $output = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -Cleanup -InputArgs $inputArgs *>&1)
         Set-UDElement -Id "output" -Content { 
             New-UDCard -Id 'outputCard' -Content {
                 New-UDElement -Tag 'span' -Attributes  @{ style = @{whiteSpace = "pre-wrap" } } -Content {
@@ -399,6 +420,27 @@ function Start-AtomicGUI {
     }
     $epCheckPrereqs = New-UDEndpoint -Endpoint {
         Clear-UDElement -Id "output"
+        $inputArgs = @{}
+        $numArgs = 0
+        try {
+            # Calculates the number of input arguments (stored in className of the first input argument)
+            $classString = (Get-UDElement -Id 'inputArg 1').Attributes['className']
+            $classSplit = $classString.Split(",")
+            $numArgsString = $classSplit[0]
+            $inputArgName = $classSplit[1]
+            $numArgs = [int]$numArgsString
+        }
+        catch {
+            # If there is no first input argument, sets the number of args to 0
+            $numArgs = 0
+        }
+        # If there are input arguments, creates a hashmap of the arguments and their values
+        if ($numArgs -gt 0) {
+            for ($i = 1; $i -le $numArgs; $i++) {
+                $inputArgValue = (Get-UDElement -Id "$i default").Attributes['value']
+                $inputArgs["$inputArgName"] = "$inputArgValue"
+            }
+        }
         # Gets the tNumber and testGuid from inputs
         $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
         $testSplit = $testGuidString.Split(",")
@@ -407,7 +449,7 @@ function Start-AtomicGUI {
         $techniqueSplit = $selectedTechnique.Split(",")
         $tNumber = $techniqueSplit[1]
         # Runs checkPrereqs and outputs result to a new card
-        $output = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -CheckPrereqs *>&1)
+        $output = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -CheckPrereqs -InputArgs $inputArgs *>&1)
         Set-UDElement -Id "output" -Content { 
             New-UDCard -Id 'outputCard' -Content {
                 New-UDElement -Tag 'span' -Attributes  @{ style = @{whiteSpace = "pre-wrap" } } -Content {
@@ -418,6 +460,27 @@ function Start-AtomicGUI {
     }
     $epGetPrereqs = New-UDEndpoint -Endpoint {
         Clear-UDElement -Id "output"
+        $inputArgs = @{}
+        $numArgs = 0
+        try {
+            # Calculates the number of input arguments (stored in className of the first input argument)
+            $classString = (Get-UDElement -Id 'inputArg 1').Attributes['className']
+            $classSplit = $classString.Split(",")
+            $numArgsString = $classSplit[0]
+            $inputArgName = $classSplit[1]
+            $numArgs = [int]$numArgsString
+        }
+        catch {
+            # If there is no first input argument, sets the number of args to 0
+            $numArgs = 0
+        }
+        # If there are input arguments, creates a hashmap of the arguments and their values
+        if ($numArgs -gt 0) {
+            for ($i = 1; $i -le $numArgs; $i++) {
+                $inputArgValue = (Get-UDElement -Id "$i default").Attributes['value']
+                $inputArgs["$inputArgName"] = "$inputArgValue"
+            }
+        }
         # Gets the tNumber and testGuid from inputs
         $testGuidString = (Get-UDElement -Id "testSelectOptions").Attributes['value']
         $testSplit = $testGuidString.Split(",")
@@ -426,7 +489,7 @@ function Start-AtomicGUI {
         $techniqueSplit = $selectedTechnique.Split(",")
         $tNumber = $techniqueSplit[1]
         # Runs getPrereqs and outputs result to a new card
-        $output = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -GetPrereqs *>&1 )
+        $output = (Invoke-AtomicTest $tNumber -TestGuids $testGuid -GetPrereqs -InputArgs $inputArgs *>&1 )
         Set-UDElement -Id "output" -Content { 
             New-UDCard -Id 'outputCard' -Content {
                 New-UDElement -Tag 'span' -Attributes  @{ style = @{whiteSpace = "pre-wrap" } } -Content {
