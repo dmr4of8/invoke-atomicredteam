@@ -314,7 +314,7 @@ function Start-AtomicGUI {
         }
         # Create technique select dropdown
         $techiqueIDs = ($index | where-object { $_.Tactic -eq $selectedTactic }).'Technique #' | Get-Unique
-        F$techniques = $AllTechniques | Where-Object { ($techiqueIDs -contains $_.attack_technique) -and ( $_.atomic_tests.supported_platforms -contains $platform)}
+        $techniques = $AllTechniques | Where-Object { ($techiqueIDs -contains $_.attack_technique) -and ( $_.atomic_tests.supported_platforms -contains $platform)}
         $techniqueOptions = $techniques | ForEach-Object { New-UDSelectOption -Name $_.display_name -Value "$($_.display_name),$($_.attack_technique)" }
         $mitreTechniqueOptions = @()
         $mitreTechniqueOptions += New-UDSelectOption -Name "Select" -Value "Select"
